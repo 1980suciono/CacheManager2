@@ -3,6 +3,8 @@ package com.indolibs.libs;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.util.Arrays;
+import java.util.Comparator;
 
 public class CacheManager2 {
 	private static final long DEFAULT_MAX_SIZE = 83886080; // 80 MB
@@ -92,20 +94,57 @@ public class CacheManager2 {
 		}
         return bArr;
 	}
+	
+	private static void sortFilesByOldestFirst(File[] files) {
+		if (files == null || files.length <= 1) {
+			return;
+		}
+
+		Arrays.sort(files, new Comparator<File>() {
+			@Override
+			public int compare(File f1, File f2) {
+				if (f1 == f2) {
+					return 0;
+				}
+				if (f1 == null) {
+					return -1;
+				}
+				if (f2 == null) {
+					return 1;
+				}
+
+				long t1 = f1.lastModified();
+				long t2 = f2.lastModified();
+				if (t1 < t2) {
+					return -1;
+				} else if (t1 > t2) {
+					return 1;
+				} else {
+					return 0;
+				}
+			}
+		});
+	}
 
     private static void cleanDir(File file, long j) {
-        long length = 0;
-        File[] files = file.listFiles();
-        if (files != null) {
-            for (File file2 : files) {
-                length += file2.length();
-                file2.delete();
-                if (length >= j) {
-                    return;
-                }
-            }
-        }
-    }
+		long length = 0;
+		File[] files = file.listFiles();
+		if (files != null && files.length > 0) {
+			sortFilesByOldestFirst(files);
+
+			for (File file2 : files) {
+				if (file2.isFile()) {
+					long fileSize = file2.length();
+					if (file2.delete()) {
+						length += fileSize;
+					}
+					if (length >= j) {
+						return;
+					}
+				}
+			}
+		}
+	}
 
     private static long getDirSize(File file) {
         long length = 0;
